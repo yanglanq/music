@@ -1,12 +1,12 @@
 <template>
     <div class="rank">
         rank 组件
-    <div>
+    </div>
 </template>
 
 <script>
     export default {
-        name: "rank.vue"
+        name: "rank"
     }
 </script>
 

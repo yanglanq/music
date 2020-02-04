@@ -1,5 +1,7 @@
 <template>
-    
+    <div class="singer">
+        singer 组件
+    </div>
 </template>
 
 <script>

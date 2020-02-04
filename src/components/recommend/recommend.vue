@@ -1,6 +1,8 @@
 <template>
     <div class="recommend">
-    <div>
+        recommend 组件
+
+    </div>
 </template>
 
 <script>
@@ -9,6 +11,6 @@
     }
 </script>
 
-<style scoped>
-
+<style scoped lang="stylus">
+    @import "../../common/stylus/variable.styl";
 </style>
