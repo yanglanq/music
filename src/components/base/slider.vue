@@ -123,6 +123,7 @@
             _click(index) {
                 let pageIndex = index;
                 this.currentPageIndex = index;
+                console.log(this.currentPageIndex)
                 this.slider.goToPage(pageIndex, 0, 400);
                 clearTimeout(this.timer);
                 this._play()
