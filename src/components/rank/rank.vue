@@ -1,15 +1,13 @@
 <template>
-    <div class="rank">
-        rank 组件
-    </div>
+  <div class="rank">
+    rank 组件
+  </div>
 </template>
 
 <script>
-    export default {
-        name: "rank"
-    }
+export default {
+  name: "rank"
+};
 </script>
 
-<style scoped>
-
-</style>
+<style scoped></style>

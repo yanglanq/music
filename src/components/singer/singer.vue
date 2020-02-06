@@ -1,15 +1,13 @@
 <template>
-    <div class="singer">
-        singer 组件
-    </div>
+  <div class="singer">
+    singer 组件
+  </div>
 </template>
 
 <script>
-    export default {
-        name: "singer"
-    }
+export default {
+  name: "singer"
+};
 </script>
 
-<style scoped>
-
-</style>
+<style scoped></style>
