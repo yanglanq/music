@@ -21,13 +21,16 @@ app.use(bodyParser.json());
 
 const {getRecommendData} = require("./recommend/getRecommendData");
 const {getRecommendDetailData} = require("./recomendDetail/setDetailData");
+const {getSingerData} = require("./singer/getSingerData");
+
+
 
 //推荐页 歌单数据
 app.get("/api/getRecommendData",getRecommendData);
 //获取推荐页详细数据
 app.get("/api/getRecommendDetailData/:id",getRecommendDetailData);
-
-
+//获取歌手列表数据
+app.get("/api/getSingerData",getSingerData);
 
 
 

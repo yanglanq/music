@@ -10,6 +10,11 @@
                                             <img v-bind:src="item.cover" alt="">
                                         </a>
                         </div>
+                        <div>
+                                        <a>
+                                            <img v-bind:src="sliderRecommends[0].cover" alt="">
+                                        </a>
+                        </div>
                     </slider>
                 </div>
                 <div class="recommend-list">
