@@ -33,7 +33,7 @@
         },
         methods: {
             selectItem(item) {// 当具体歌手被点击时 触发selectItem，向父组件发射事件以及歌手数据
-                this.$emit('select', item);//给父组件数据
+            	this.$emit('select', item);//给父组件数据
             },
             refresh() {//控制重新渲染
                 this.$refs.listview.refresh()

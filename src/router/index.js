@@ -5,6 +5,7 @@ import recommend from "../components/recommend/recommend";
 import search from "../components/search/search";
 import singer from "../components/singer/singer";
 import tab from "../components/tab/tab";
+import SingerDetail from "../components/singer-detail/singer-detail"
 
 Vue.use(VueRouter); //调用 VueRouter 中间件
 //编写路由
@@ -32,6 +33,12 @@ const routes = [
   {
     path: "/singer",
     component: singer
+    ,children:[//singer 下面的子路由
+      {
+        path:":id"//根据 歌手id 返回相应信息
+        ,component:SingerDetail
+      }
+    ]
   }
 ];
 

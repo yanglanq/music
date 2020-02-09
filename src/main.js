@@ -1,7 +1,7 @@
 import Vue from "vue";
 import App from "./App.vue";
 import router from "./router"; // 引用路由
-// import store from "./store";
+import store from "./store";
 import "./common/stylus/index.styl"; //引入css文件
 
 //解决移动端三百毫秒延迟问题 fastclick 组件
@@ -12,6 +12,6 @@ Vue.config.productionTip = false;
 
 new Vue({
   router,
-  // store,
+  store,
   render: h => h(App)
 }).$mount("#app"); //挂载

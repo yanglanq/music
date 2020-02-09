@@ -18,7 +18,7 @@
 <style scoped lang="stylus">
     @import "../../common/stylus/variable"
 
-    .loadind
+    .loading
         width :100%
         text-align: center
         .desc
