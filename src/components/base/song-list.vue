@@ -1,7 +1,11 @@
 <template>
     <div class="song-list">
         <ul>
-            <li v-for="song in songs" class="item" v-bind:key="song.songMid">
+            <li
+                    v-for="(song,index) in songs" class="item"
+                    v-bind:key="song.songMid"
+                    @click="selectItem(song,index)"
+            >
                 <div class="content">
                               <h2 class="name">{{song.songName}}</h2>
                               <p class="desc">{{singername}} -- {{song.songAlbum}}</p>
@@ -24,7 +28,13 @@
 		created() {
 			// eslint-disable-next-line no-console
 			console.log(this.songs)
-		}
+		},
+        methods:{
+	        selectItem(song,index){
+				this.$emit("select",song,index)
+            }
+        }
+
 	}
 </script>
 

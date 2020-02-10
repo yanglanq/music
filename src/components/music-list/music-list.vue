@@ -31,6 +31,7 @@
                 <div class="song-list-wrapper">
                     <songList
                         :songs="songList" :singername="title"
+                        @select="selectItem"
                     >
 
                     </songList>
@@ -47,6 +48,7 @@
     import songList from "../base/song-list";
     import Scroll from "../base/scroll";
     import loading from "../base/loading";
+    import {mapActions} from "vuex";
 	export default {
 		props: { //接受传进来的props参数
 			bgImg:{// 歌手图片
@@ -65,12 +67,22 @@
 			},
 		},
 		methods:{
-			goBack(){// 点击回到上级路由
+			...mapActions([
+				"selectPlay"//变成方法
+            ])
+			,goBack(){// 点击回到上级路由
 				this.$router.go(-1);
 			}
 			,scroll(pos){
 				this.scrollY = pos.y;
 			}
+			,selectItem(song,index){
+				console.log(song,index)
+                this.selectPlay({//点击的时候整个歌单替换播放列表
+                    list:this.songList
+                    ,index:index//当前播放的索引
+                })
+            }
 		}
 		,components:{
 			songList
@@ -102,7 +114,6 @@
 				if(newY<(-this.translateY)){
 					this.$refs.bgImg.style.zIndex=10;
 					this.$refs.bgImg.style.paddingTop=0;
-
 					this.$refs.bgImg.style.height=`${this.$refs.singername.clientHeight}px`;
 				}else{
 					this.$refs.bgImg.style.zIndex=0;
@@ -172,7 +183,7 @@
                     box-sizing: border-box
                     width: 135px
                     padding: 7px 0
-                    margin: 0 auto
+                    margin: -15px auto
                     text-align: center
                     border: 1px solid $color-theme
                     color: $color-theme
