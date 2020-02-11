@@ -10,10 +10,10 @@
         <div class="bg-image" :style="bgStyle" ref="bgImg">
             <div class="play-wrapper" v-show="songList.length>0" >
                 <!-- 设置随机播放选项的按钮, 该按钮在songlist数据传输进来之后再显示出来 -->
-                <div class="play" ref="playBtn">
+                <div class="play" ref="playBtn" @click="random">
                     <!-- 添加一个引用, 当蒙版移动到顶部的时候, 我们就对这个按钮做一些操作 -->
                     <i class="icon-play"></i>
-                    <span class="text">随机播放全部</span>
+                    <span class="text" >随机播放全部</span>
                 </div>
             </div>
             <div class="filter"></div> <!-- 模糊层, 加点滤镜效果 -->
@@ -68,7 +68,8 @@
 		},
 		methods:{
 			...mapActions([
-				"selectPlay"//变成方法
+				"selectPlay"//选择播放
+                ,"randomPlay"//随机播放
             ])
 			,goBack(){// 点击回到上级路由
 				this.$router.go(-1);
@@ -77,10 +78,14 @@
 				this.scrollY = pos.y;
 			}
 			,selectItem(song,index){
-				console.log(song,index)
                 this.selectPlay({//点击的时候整个歌单替换播放列表
                     list:this.songList
                     ,index:index//当前播放的索引
+                })
+            }
+            ,random(){
+				this.randomPlay({
+					list:this.songList
                 })
             }
 		}

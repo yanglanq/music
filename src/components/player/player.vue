@@ -1,50 +1,54 @@
 <template>
     <div class="player" v-show="playlist.length>0">
         <transition name="normal"
-            @enter="enter"
-            @leave="leave"
-            @after-enter="afterEnter"
-            @after-leave="afterLeave"
-        >
-            <div class="normal-player" v-show="fullScreen">
-                <!-- 大的背景图 占据所有-->
+                    @enter="enter"
+                    @after-enter="afterEnter"
+                    @leave="leave"
+                    @after-leave="afterLeave"
+        > <!--        配置几个钩子,方便实现更复杂的动画效果,这些钩子就是模拟组件加载的几个过程            -->
+            <div class="normal-player" v-show="fullScreen"><!-- 全屏播放器 -->
                 <div class="background">
-                    <img src="" alt="" width="100%"
-                         height="100%"
-                         :src="songData.songPic"
-                    >
-                </div><!-- 需要一个朦胧层-->
+                    <!-- 大的背景图 占据所有 数据就用songData里面的songPic-->
+                    <img alt="" width="100%" height="100%" v-bind:src="songData.songPic">
+                </div>
                 <div class="top">
-                    <div class="back"
-                         @click="miniScream"
-                    ><!-- 返回按钮 切换迷你播放器 -->
+                    <div class="back" v-on:click="back"><!-- 返回按钮  绑定一个事件, 点击是缩小为迷你播放器-->
                         <i class="icon-back"></i>
                     </div>
-                    <h1 class="title" v-text="songData.songName"></h1><!-- 歌曲名称 -->
-                    <h2 class="subtitle" v-text="singer.singer_name"></h2><!-- 歌手名称 -->
+                    <h1 class="title" v-html="songData.songName"></h1><!-- 歌曲名称 -->
+                    <h2 class="subtitle" v-html="singer.singer_name"></h2><!-- 歌手名称-->
                 </div>
                 <div class="middle">
                     <div class="middle-l">
                         <div class="cd-wrapper" ref="cdWrapper"> <!-- 歌曲唱片设计 -->
-                            <div class="cd">
-                                <img :src="songData.songPic" alt="" class="image">
+                            <div class="cd" :class="cdClass">
+                                <img alt="" class="image" v-bind:src="songData.songPic">
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="bottom">
+                    <div class="progress-wrapper">
+                        <span class="time time-l">{{format(currentTime)}}</span>
+                        <div class="progress-bar-wrapper">
+                            <progressbar :percent="percent" @percentChange="onProgressBarChange"></progressbar>
+                            <!-- 调用进度条组件 -->
+                        </div>
+                        <span class="time time-r">{{songData.playTime}}</span>
+                    </div>
                     <div class="operators"><!-- 控制按钮区 -->
                         <div class="icon i-left">
-                            <i class="icon-sequence"></i><!-- 顺序播放 -->
+                            <i :class="iconMode" @click="changeMode"></i>
+                            <!-- 根据播放模式的不同, 我们设置不同的类名来改变里面的logo  点击更改播放模式-->
                         </div>
-                        <div class="icon i-left">
-                            <i class="icon-prev"></i><!-- 上一首 -->
+                        <div class="icon i-left" :class="disableCls">
+                            <i class="icon-prev" @click="prev"></i><!-- 上一首 -->
                         </div>
-                        <div class="icon i-center">
-                            <i class="icon-play"></i><!-- 播放按钮 -->
+                        <div class="icon i-center" :class="disableCls">
+                            <i :class="playIcon" @click="togglePlaying"></i><!-- 播放按钮 -->
                         </div>
-                        <div class="icon i-right">
-                            <i class="icon-next"></i><!-- 下一首 -->
+                        <div class="icon i-right" :class="disableCls">
+                            <i class="icon-next" @click="next"></i><!-- 下一首 -->
                         </div>
                         <div class="icon i-right">
                             <i class="icon icon-not-favorite"></i><!-- 上一首 -->
@@ -53,19 +57,21 @@
                 </div>
             </div>
         </transition>
-        <!-- 全屏播放器 -->
         <transition name="mini">
-            <div class="mini-player" v-show="!fullScreen">
-                <div class="icon"
-                     @click="full"
-                ><!-- 小型唱片 -->
-                    <img width="40" height="40" :src="singer.singer_pic">
+            <div class="mini-player" v-show="!fullScreen" @click="open"><!-- 迷你播放器 -->
+                <div class="icon">
+                    <img alt="" width="40" height="40" v-bind:src="songData.songPic" :class="cdClass">
+                    <!-- 小型唱片 也添加一个cdClass-->
                 </div>
                 <div class="text">
-                    <h2 class="name" v-text="songData.songName"></h2>
-                    <p class="desc" v-text="singer.singer_name"></p>
+                    <h2 class="name" v-html="songData.songName"></h2><!-- 歌曲名称 -->
+                    <p class="desc" v-html="singer.singer_name"></p><!-- 歌手名称-->
                 </div>
                 <div class="control">
+                    <progressCircle :radius="radius" :percent="percent">
+                        <i :class="miniIcon" @click.stop="togglePlaying" class="icon-mini"></i>
+                        <!-- 迷你播放器的播放按钮  阻止冒泡-->
+                    </progressCircle> <!-- 引入圆形进度条 -->
 
                 </div>
                 <div class="control">
@@ -73,62 +79,192 @@
                 </div>
             </div>
         </transition>
-        <!-- 迷你播放器 -->
-
+        <audio v-bind:src="songData.m4aUrl" ref="audio" @canplay="ready" @error="error"
+               @timeupdate="updateTime" @ended="end"></audio>
+        <!--    增加几个监听事件: 是否可以开始播放, 是否音乐数据加载出错, 是否播放数据更新   -->
     </div>
 </template>
 <script>
-	import {mapGetters} from "vuex";
-	import {mapMutations} from "vuex"
-    import axios from "axios"
-    import animations from "create-keyframe-animation"
+	import {mapGetters, mapMutations} from "vuex";
+	import axios from "axios";
+	import animations from "create-keyframe-animation"; // 引入动画库
+	import progressbar from "../base/progress-bar"; // 导入进度条组件
+	import progressCircle from "../base/progress-circle"; //导入原型进度条组件
+	import {playMode} from "../../common/js/config";//导入播放模式的基本参数, 避免出错
+	import {shuffle} from "../../common/js/util";
 
 	export default {
 		name: "player",
-        data(){
-			return{
-				songData:{}
-            }
-        },
-		computed:{
-			//得到基本参数, 当传入的播放列表的时候展开播放器, 并根据播放器的fullscreen参数的不同,选择全屏或是迷你播放器
+		computed: {
 			...mapGetters([
-				"fullScreen",//是否全屏
-				"playlist",//播放列表
-                "currentSong",//当前歌曲
-                "singer",//当前歌手
-			])
+				"fullScreen",
+				"playlist",
+				'currentSong',//获取当前歌曲数据
+				'singer',
+				'playing',
+				'currentIndex',//获取当前歌曲的索引值,
+				'playMode',//歌曲的播放模式
+				'sequenceList',//获取默认的顺序列表
+			]),
+			playIcon() { // 更改播放按钮的logo图, 每次playing的值发生变化,就返回一个新的字符串, 改变元素的类名
+				return this.playing ? 'icon-pause' : 'icon-play'
+			},
+			miniIcon() {// 更改mini 播放器的播放按钮的logo图, 每次playing的值发生变化,就返回一个新的字符串, 改变元素的类名
+				return this.playing ? 'icon-pause-mini' : 'icon-play-mini'
+			},
+			cdClass() { // 通过控制类名 来控制cd图的旋转, 全屏播放器和迷你播放器都要转起来
+				return this.playing ? "play" : "play pause";
+			},
+			disableCls() {
+				return this.songReady ? "" : "disable";
+			},
+			percent() {
+				return this.currentTime / this.totalTime;
+			},
+			iconMode() {
+				return this.playMode === playMode.sequence ? "icon-sequence" : this.playMode === playMode.loop ? "icon-loop" : "icon-random";
+				//判断返回值
+			}
+		},
+		data() {
+			return {
+				songData: {},
+				songReady: false,//歌曲是否可以开始播放, 默认为零,
+				currentTime: 0,//默认的播放时间
+				totalTime: 0,//歌曲总时间
+				radius: 32,// 定义圆形的进度条组件的基本尺寸
+			}
+		},
+		methods: {
+			...mapMutations({
+				// 获取对于的设置vuex值的方式
+				setFullScreen: "SET_FULL_SCREEN",
+				setPlayingState: "SET_PLAYING_STATE",
+				setCurrentIndex: "SET_CURRENT_INDEX",
+				setPlayMode:"SET_PLAY_MODE",
+				setPlayList:"SET_PLAYLIST"
+			}),
+			end(){
+				//歌曲播放完成
+				if(this.playMode===playMode.loop){
+					//如果是循环模式
+					this.loop();//
+				}else {
+					//非循环模式
+					this.next();//下一首
+				}
 
-		}
-		,watch:{
-			currentSong(){//当前歌曲
-				let data = {
-					mid:this.currentSong.songMid//获取歌曲 mid，便于后面获取歌曲数据
+			},
+			loop(){
+				this.$refs.audio.currentTime=0;//播放时间归零
+				this.$refs.audio.play();//重新播放
+			},
+			changeMode(){
+				let nowMode = (this.playMode+1) % 3;// 每点击一次, 值加一, 然后求模3
+				this.setPlayMode(nowMode); // 设置播放模式的值
+				let list = null;//定义一个空列表, 用来存储根据播放模式不同设置的不同的列表顺序数据
+				console.log("nowMode",nowMode,this.playMode);
+				if(nowMode===playMode.random){
+					//打乱数组, 这个打乱的功能咱们专门定义一个函数来实现,我们统一写在 common>js的里面
+					list=shuffle(this.sequenceList);
+				}else {
+					list = this.sequenceList;//顺序播不用设置
+				}
+				this.resetCurrentIndex(list,this.currentSong);
+				//但是重新设置之后, 咱们当前的歌曲的索引值
+				this.setPlayList(list);
+			},
+			resetCurrentIndex(list,song){
+				let index = list.findIndex((item)=>{
+					return item.songMid===song.songMid;// 匹配songMid一致的值
+				});
+				// eslint-disable-next-line no-console
+				console.log(index);
+				this.setCurrentIndex(index);
+				//但是这里会有一些问题, 我们改变了index的值, 随之而来的currentsong也会重新激活, 那么就要重新播放
+				// 所以我们监听一下, 当currenSong发现值变化了,但是songMid一致的情况下, 那么就不用变了
+				// 所以就在watch里面修改一下currentSong的逻辑
+			},
+			onProgressBarChange(percent) { //子组件传递过来的数据
+				// eslint-disable-next-line no-console
+				console.log("player组件的百分比", percent)
+				// eslint-disable-next-line no-console
 
-                }
-                axios.post("http://localhost:9527/api/getSongDetailData",JSON.stringify(data)).then(da=>{
-	                console.log(da)
-                    if(Array.isArray(da.data)){//da 是数组
-                    	this.songData = da.data[0]
-                    }else{
-	                    this.songData = da.data
-                    }
-                })
+				this.$refs.audio.currentTime = Math.floor(this.totalTime * percent);
+				if (!this.playing) { // 如果我们拉动进度的条的时候歌曲没有在播放, 那么就把它设置为播放
+					this.togglePlaying()
+				}
+			},
+			format(time) {
+				// eslint-disable-next-line no-console
+				//console.log(time)
+				let min = Math.floor(time / 60);
+				let second = Math.floor(time % 60);
 
-            }
-        }
-        ,methods:{
-            ...mapMutations({
-                setFullScreen:"SET_FULL_SCREEN"
-            })
-			,miniScream(){
-				this.setFullScreen(false)
-            }
-            ,full(){
-				this.setFullScreen(true)
-            }
-            ,_getPosAndScale() { //获取基本位置
-				//定义小图元素的尺寸参数数据 数据固定
+				//对于只有一位数的, 前面补个0 , 看上去格式统一一下
+				if (second < 10) {
+					second = "0" + second;
+				}
+				if (min < 10) {
+					min = "0" + min;
+				}
+				return `${min}:${second}`;
+			},
+			updateTime(ev) {
+				this.currentTime = ev.target.currentTime;//获取当前音乐的播放时间, 这个时间一直都是秒数
+			},
+
+			open() {
+				this.setFullScreen(true);
+			},
+			back() {
+				this.setFullScreen(false);
+			},
+			prev() {
+				if (!this.songReady) { //当歌曲没有加载好的时候, 点击直接返回, 使之无效化
+					return;
+				}
+				let nowIndex = this.currentIndex - 1;
+				if (nowIndex < 0) {
+					nowIndex = this.playlist.length - 1;//播放到第一首了,就回到最后一首歌
+				}
+				this.setCurrentIndex(nowIndex);//设置当前索引值
+				if (!this.playing) {
+					this.togglePlaying();
+					// 当我们的播放器处于暂停的时候, 我们点击下一首的时候,也把音乐设置为暂停的状态
+					// 因为在默认的情况下我们更改了currentIndex,那么currentSong也会变
+					// currentSong的变化就会触发新的请求,接着就是播放新的歌
+					// 这种情况就会变成, 无论当前的播放是啥, 下一首都是播放, 但是这个没有触发playing的值,自然播放按钮的logo就不会变
+				}
+				this.songReady = false;//复位
+			},
+			next() {
+				if (!this.songReady) { //当歌曲没有加载好的时候, 点击直接返回, 使之无效化
+					return;
+				}
+				let nowIndex = this.currentIndex + 1;
+				if (nowIndex > this.playlist.length) {
+					nowIndex = 0;//播放到最后一首了,就回到第一首歌
+				}
+				this.setCurrentIndex(nowIndex);//设置当前索引值
+				if (!this.playing) {
+					this.togglePlaying();
+					// 当我们的播放器处于暂停的时候, 我们点击下一首的时候,也把音乐设置为暂停的状态
+					// 因为在默认的情况下我们更改了currentIndex,那么currentSong也会变
+					// currentSong的变化就会触发新的请求,接着就是播放新的歌
+					// 这种情况就会变成, 无论当前的播放是啥, 下一首都是播放, 但是这个没有触发playing的值,自然播放按钮的logo就不会变
+				}
+				this.songReady = false;//复位
+			},
+			ready() {
+				this.songReady = true;//当audio元素激活了canplay之后, 自动把songready设置为true
+			},
+			error() {
+				// 万一歌曲加载失败了, 我们手动把this.songReady也设置为true, 方便继续点击下一首
+				this.songReady = false;
+			},
+			_getPosAndScale() { //获取基本位置
+				//定义小图元素的尺寸参数数据
 				const targetWidth = 40;
 				//定义小图元素的位置参数
 				const paddingLeft = 40;
@@ -137,28 +273,28 @@
 
 				//定义大图尺寸
 				const width = window.innerWidth * 0.8;
-				const scale = targetWidth / width; // 计算大小图缩放比例 小图宽度/大图宽度
+				const scale = targetWidth / width; // 计算大小图缩放比例
 				const x = -(window.innerWidth / 2 - paddingLeft);// x偏移量  大图到小图, 移动负值
 				const y = window.innerHeight - paddingTop - width / 2 - paddingBottom;
 				// 向下移动,为正值 因为图形是原型, 所以高的一半也就是宽的一半
 				return {
-					x,//向左移大小
-					y,//向右移大小
-					scale//缩小放大比例
+					x,
+					y,
+					scale
 				}
-			}
-            ,enter(el,done){
+			},
+			enter(el, done) {
 				//el:绑定的元素
 				//done: 执行下一个钩子, 和express中间件的next逻辑一致
 				// eslint-disable-next-line no-console
-				console.log(el,done);
+				//console.log(el, done);
 				//获取基本参数
 				const {x, y, scale} = this._getPosAndScale()
 
 				//定义动画
 				let animation = {
 					//从小图的位置, 挪动到大图的值
-					0: {// 0% 的时候 加上这个属性，会产生这个动画
+					0: {
 						transform: `translate3d(${x}px,${y}px,0) scale(${scale})`
 					},
 					60: {
@@ -178,24 +314,73 @@
 					}
 				});
 
-				animations.runAnimation(this.$refs.cdWrapper, 'move', done);//执行动画的元素 动画名称
+				animations.runAnimation(this.$refs.cdWrapper, 'move', done);
 				//激活动画 cdWrapper是middle元素里面的额class名称为 cd-wrapper的元素
 			},
-			afterEnter(){
+			afterEnter() {
 				animations.unregisterAnimation('move');//执行完成动画后, 解除注册动画
 				this.$refs.cdWrapper.style.animation = '' // 清除动画内容
 			},
-			leave(el,done){
-				this.$refs.cdWrapper.style.transition = 'all 0.4s' ;// 设置基本的动画过渡时间
+			leave(el, done) {
+				this.$refs.cdWrapper.style.transition = 'all 0.4s';// 设置基本的动画过渡时间
 				const {x, y, scale} = this._getPosAndScale(); // 获取基本参数
 				this.$refs.cdWrapper.style["transform"] = `translate3d(${x}px,${y}px,0) scale(${scale})`;// 从大到小
-				this.$refs.cdWrapper.addEventListener('transitionend', done);// 监听动画是否结束, 结束之后执行下一步骤 跳到下一个钩子
+				this.$refs.cdWrapper.addEventListener('transitionend', done);// 监听动画是否结束, 结束之后执行下一步骤
 			},
-			afterLeave(){
+			afterLeave() {
 				this.$refs.cdWrapper.style.transition = ''; //清空过渡时间
 				this.$refs.cdWrapper.style["transform"] = ''; // 清空动画
+			},
+			togglePlaying() {
+				this.setPlayingState(!this.playing);//点击一次, 变更播放状态.
 			}
-        }
+		},
+		watch: {
+			currentSong(newSong,oldSong) { // 当 currentSong数据更新之后, 我们就利用当前的song里面的数据,来发送进一步的请求,得到具体的歌曲数据
+				// eslint-disable-next-line no-console
+				//console.log(this.currentSong.songMid);
+				if(newSong.songMid===oldSong.songMid){
+					return ; // 如果改变后这个
+				}
+				let data = {
+					mid: this.currentSong.songMid
+				};
+				axios.post("http://127.0.0.1:9527/api/getSongDetailData", JSON.stringify(data)).then((data) => {
+					// this.songData=data.data[0];
+					// eslint-disable-next-line no-console
+					//console.log(Array.isArray(data.data));
+					if (Array.isArray(data.data)) {//部分接口返回的是一个数组,表示有多个版本
+						this.songData = data.data[0]
+					} else {
+						this.songData = data.data; //单独版本的话就直接设置就好
+					}
+				})
+			},
+			songData() {
+				// eslint-disable-next-line no-console
+				//console.log("songData数据已更新");
+				// eslint-disable-next-line no-console
+				//console.log(this.songData.m4aUrl);
+
+				this.$nextTick(() => {
+					//因为我们设置audio元素的src的瞬间, 资源还没加载好, 所以贸然直接播放是会出问题的
+					this.$refs.audio.play();
+				});
+				// eslint-disable-next-line no-console
+				//console.log("歌曲总时间的字符串值:", this.songData.playTime);
+				this.totalTime = Number(this.songData.playTime.split(":")[0]) * 60 + Number(this.songData.playTime.split(":")[1]);
+				// eslint-disable-next-line no-console
+				//console.log("歌曲的总时间", this.totalTime);
+			},
+			playing(newPlaying) {
+				let audio = this.$refs.audio;
+				newPlaying ? audio.play() : audio.pause(); // 根据播放状态, 改变音乐播放情况
+			}
+		},
+		components: {
+			progressbar,
+			progressCircle
+		}
 	}
 </script>
 
@@ -485,7 +670,7 @@
                     font-size: 32px
                     position: absolute
                     left: 0
-                    top: 0
+                    top: 1px
 
     @keyframes rotate
         0%

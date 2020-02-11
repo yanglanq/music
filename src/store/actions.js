@@ -1,14 +1,30 @@
 import * as types from "./mutations-type"
-//动作
+import {playMode} from "../common/js/config";
+import {shuffle} from "../common/js/util";
+
 export const selectPlay = function (
-	{commit},//动作为 commit
+	{commit},
 	{list, index}
 ) {
-	commit(types.SET_PLAYLIST,list);//设置播放列表
-	commit(types.SET_CURRENT_INDEX,index);//设置当前歌曲索引
-	commit(types.SET_SEQUENCE_LIST,list);//设置顺序播放列表
-	commit(types.SET_FULL_SCREEN,true);//全屏播放
-	commit(types.SET_PLAYING_STATE,true);//设置播放器状态为 true
-}
+	commit(types.SET_PLAYLIST,list);
+	commit(types.SET_CURRENT_INDEX,index);
+	commit(types.SET_SEQUENCE_LIST,list);
+	commit(types.SET_FULL_SCREEN,true);
+	commit(types.SET_PLAYING_STATE,true);
+};
+
+export const randomPlay = function (
+	{commit},
+	{list}
+	) {
+	commit(types.SET_PLAY_MODE, playMode.random);
+	commit(types.SET_SEQUENCE_LIST, list);
+	let randomList = shuffle(list);
+	commit(types.SET_PLAYLIST, randomList);
+	commit(types.SET_CURRENT_INDEX, 0);
+	commit(types.SET_FULL_SCREEN, true);
+	commit(types.SET_PLAYING_STATE, true);
+};
+
 
 // 在 methods 中用 ...mapActions([]) 使用
