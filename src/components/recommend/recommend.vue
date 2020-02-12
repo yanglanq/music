@@ -21,7 +21,9 @@
                     <h1 class="list-title">热门歌单推荐</h1>
                     <ul>
                         <li v-for="item in disclist" v-bind:key="item.id"
-                            class="item">
+                            class="item"
+                            @click="selectItem(item)"
+                        >
                             <div class="icon">
                                 <img width="60" height="60" v-bind:src="item.cover" alt="">
                             </div>
@@ -37,6 +39,7 @@
                 <loading></loading>
             </div>
         </scroll>
+        <router-view></router-view>
     </div>
 </template>
 
@@ -47,6 +50,7 @@
     import Slider from "../base/slider"
     import Scroll from "../base/scroll"
     import loading from "../../../../musicdemo/src/components/base/loading";
+    import {mapMutations} from "vuex"
 
     export default {
         data() {
@@ -77,6 +81,24 @@
             Slider
             ,Scroll
             ,loading
+        },
+        methods:{
+	        ...mapMutations({
+		        setDisc:"SET_DISC"
+	        }),
+        	selectItem(item){
+                axios.get(`http://localhost:9527/api/getRecommendDetailData/${item.id}`).then(da=>{
+                	let disc;
+                	if(da.data[0]){
+		                disc = da.data[0];
+                    }else{
+		                disc = da.data
+                    }
+                	this.setDisc(disc);//设置专辑
+                })
+		        this.$router.push(`/recommend/${item.id}`)//进行路由跳转
+            },
+
         }
     }
 </script>

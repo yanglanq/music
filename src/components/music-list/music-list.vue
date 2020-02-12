@@ -1,40 +1,29 @@
 <template>
-      
     <div class="music-list">
         <div class="back" @click="goBack">
-                  <i class="icon-back"></i>
+            <i class="icon-back"></i>
         </div>
-        <h1 class="title" ref="singername">
-         {{title}}
-        </h1>
-        <div class="bg-image" :style="bgStyle" ref="bgImg">
+        <h1 class="title" ref="singerName">
+            {{title}}
+        </h1>
+        <div class="bg-image" :style="bgStyle" ref="bgImage">
             <div class="play-wrapper" v-show="songList.length>0" >
                 <!-- 设置随机播放选项的按钮, 该按钮在songlist数据传输进来之后再显示出来 -->
-                <div class="play" ref="playBtn" @click="random">
+                <div class="play" ref="playBtn"  @click="random">
                     <!-- 添加一个引用, 当蒙版移动到顶部的时候, 我们就对这个按钮做一些操作 -->
                     <i class="icon-play"></i>
-                    <span class="text" >随机播放全部</span>
+                    <span class="text">随机播放全部</span>
                 </div>
             </div>
-            <div class="filter"></div> <!-- 模糊层, 加点滤镜效果 -->
+            <div class="filter"></div> <!-- 模糊层 -->
         </div>
-        <div class="bg-layer" ref="layer">
-            <!-- 新建的蒙版元素 -->
-        </div>
-        <Scroll :data="songList" class="list" ref="list"
-                @scroll="scroll"
-                :probeType="probeType"
-                :listen-scroll="listenScroll"
-        >
-            <!-- 必须用一个 div 撑开 -->
+        <div class="bg-layer" ref="layer"></div> <!-- 新建一个蒙版元素, 加上ref值 -->
+        <Scroll @scroll="scroll" :data="songList" class="list" ref="list" :probeType="probeType" :listenScroll="listenScroll">
+            <!--  scroll事件就会冒泡上来 我们再监听一个scroll事件  传入自定义的数据, 激活scroll组件的功能-->
             <div>
+                <!-- 传入数据, 使得scroll组件知道内容的量    设置该组件的top值-->
                 <div class="song-list-wrapper">
-                    <songList
-                        :songs="songList" :singername="title"
-                        @select="selectItem"
-                    >
-
-                    </songList>
+                    <songlist v-bind:songs="songList" v-bind:singername="title" @select="selectItem"></songlist>
                 </div>
             </div>
             <div class="loading-container" v-show="!songList.length">
@@ -45,19 +34,22 @@
 </template>
 
 <script>
-    import songList from "../base/song-list";
-    import Scroll from "../base/scroll";
-    import loading from "../base/loading";
-    import {mapActions} from "vuex";
+	import songlist from "../base/song-list"
+	import Scroll from "../base/scroll"
+	import loading from "../base/loading";
+	import {mapActions} from "vuex";
+	import {playlistMixin} from "../../common/js/mixin";
+
 	export default {
-		props: { //接受传进来的props参数
+		mixins:[playlistMixin],// 引用混入组件
+		props: {
 			bgImg:{// 歌手图片
 				type:String
 			},
-			songList:{
+			songList:{ // 歌曲列表
 				type: Array
 			},
-			title:{
+			title:{  // 歌手名称
 				type:String
 			}
 		},
@@ -66,67 +58,86 @@
 				return `background-image:url(${this.bgImg})`;
 			},
 		},
+		data(){
+			return {
+				scrollY:0,//配置,默认的Y轴偏移,
+				//设置一些scroll组件的参数, 使得scroll组件能够把滚动事件传回来而不是截住
+				probeType:3,//除了实时派发scroll事件，在swipe的情况下仍然能实时派发scroll事件
+				listenScroll:true,//是否派发滚动事件,
+			}
+		},
 		methods:{
-			...mapActions([
-				"selectPlay"//选择播放
-                ,"randomPlay"//随机播放
-            ])
-			,goBack(){// 点击回到上级路由
-				this.$router.go(-1);
-			}
-			,scroll(pos){
-				this.scrollY = pos.y;
-			}
-			,selectItem(song,index){
-                this.selectPlay({//点击的时候整个歌单替换播放列表
-                    list:this.songList
-                    ,index:index//当前播放的索引
-                })
-            }
-            ,random(){
+			handlePlaylist(playlist){
+				// 监听是否得到了playlist的值
+				this.$refs.list.$el.style.bottom=playlist.length > 0 ? "50px" : "";
+				this.$refs.list.refresh();
+			},
+			random(){
+				// eslint-disable-next-line no-console
+				console.log("随机播放全部按钮");
 				this.randomPlay({
 					list:this.songList
-                })
-            }
-		}
-		,components:{
-			songList
-            ,Scroll
-            ,loading
-        }
-        ,mounted() {
-			this.$refs.list.$el.style.top = `${this.$refs.bgImg.clientHeight}px`
-		    this.translateY = this.$refs.bgImg.clientHeight-this.$refs.singername.clientHeight;
-			}
-        ,data(){
-			return{
-				scrollY:0
-                ,probeType:3
-                ,listenScroll:true
-            }
-        }
-        ,watch:{
+				})
+			},
+			goBack(){
+				this.$router.go(-1);
+			},
+			scroll(pos){
+				this.scrollY=pos.y;//设置当前的Y周偏移量
+			},
+			selectItem(item,index){
+				//设置playlist,playing,fullscreen, playMode, currentIndex等值
+				//这种复杂的值设置,我们可以专门设置一个actions来处理
+				// eslint-disable-next-line no-console
+				console.log(item,index)
+				this.selectPlay({ // 其他的就是默认的值
+					list:this.songList,//传入当前数据的歌曲列表
+					index:index,//当前歌曲索引
+				})
+			},
+			...mapActions([
+				"selectPlay",
+				"randomPlay"
+			])
+		},
+		watch:{
 			scrollY(newY){
-				//当 scroll 组件发生了滚动，我们判断向上的滚动值，然后给蒙版设置
 				//当scrollY的值发生变化的时候, 我们就触发一个事件, 这个值的变化源自于scroll组件传递过来的数据
 				//做一个限制, 不要让遮盖全部滚上去了, 留一个顶部的歌手名称的位置
 				//那么 向上移动的限制就是 (图片的高度-文字的高度), 记住元素向上滑动,那么最终就是负值
 				let maxTranslateY = Math.max(-this.translateY,newY);
-				console.log(-this.translateY,newY)
 				//设置新的偏移量
-				this.$refs.layer.style["transform"] =
-					`translate3d(0,${maxTranslateY}px,0)`;
+				this.$refs.layer.style["transform"] = `translate3d(0,${maxTranslateY}px,0)`;
 				if(newY<(-this.translateY)){
-					this.$refs.bgImg.style.zIndex=10;
-					this.$refs.bgImg.style.paddingTop=0;
-					this.$refs.bgImg.style.height=`${this.$refs.singername.clientHeight}px`;
+					this.$refs.bgImage.style.zIndex=10;
+					this.$refs.bgImage.style.paddingTop=0;
+					this.$refs.bgImage.style.height=`${this.$refs.singerName.clientHeight}px`;
+					this.$refs.playBtn.style.display="none";
 				}else{
-					this.$refs.bgImg.style.zIndex=0;
-					this.$refs.bgImg.style.paddingTop="70%";
-					this.$refs.bgImg.style.height=0;
+					this.$refs.bgImage.style.zIndex=0;
+					this.$refs.bgImage.style.paddingTop="70%";
+					this.$refs.bgImage.style.height=0;
+					this.$refs.playBtn.style.display="block";
 				}
 			}
-        }
+		},
+		components:{
+			songlist,
+			Scroll,
+			loading
+		},
+		mounted() {
+			//设置一个偏移量, 使得下方的songlist组件不要把上面的歌手图片给遮住了
+			this.$refs.list.$el.style.top=`${this.$refs.bgImage.clientHeight}px`;
+
+			//计算出蒙版上移的最高值
+			this.translateY=this.$refs.bgImage.clientHeight-this.$refs.singerName.clientHeight
+		},
+		created() {
+			//设置一些scroll组件的参数, 使得scroll组件能够把滚动事件传回来而不是截住
+			this.probeType=3;//除了实时派发scroll事件，在swipe的情况下仍然能实时派发scroll事件
+			this.listenScroll=true;//是否派发滚动事件
+		}
 	};
 </script>
 

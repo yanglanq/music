@@ -24,7 +24,7 @@ const {getRecommendDetailData} = require("./recomendDetail/setDetailData");
 const {getSingerData} = require("./singer/getSingerData");
 const {getSingerDetailData} = require("./singerDetailTable/getSingerDetail");
 const {getSongDetailData} = require("./songDetail/getSongDetail")
-
+const {getLyricData} = require("./lyric/getLyric")
 
 //推荐页 歌单数据
 app.get("/api/getRecommendData",getRecommendData);
@@ -36,6 +36,8 @@ app.get("/api/getSingerData",getSingerData);
 app.post("/api/getSingerDetailData",getSingerDetailData)
 //获取歌曲详细数据
 app.post("/api/getSongDetailData",getSongDetailData);
+//获取歌词数据
+app.post("/api/getLyricData",getLyricData);
 
 
 

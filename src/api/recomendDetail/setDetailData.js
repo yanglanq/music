@@ -33,12 +33,13 @@ module.exports = {
                         //finalData.tag = [];//歌单标签
                         finalData.songList = []; //歌单歌曲列表
                         finalData.tag = songList.taogeData.tag;
-
+                        console.log(songList.taogeData.songlist[0],songList.taogeData.songlist[0].singer)
                         songList.taogeData.songlist.forEach(item => {
                             finalData.songList.push({
                                 singer: item.singer,
-                                mid: item.mid,
-                                name: item.name
+                                songMid: item.mid,
+                                songName: item.name,
+                                songAlbum:songList.taogeData.title
                             });
                         });
                         recommendDetailTable

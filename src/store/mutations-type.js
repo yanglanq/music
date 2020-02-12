@@ -5,3 +5,4 @@ export const SET_PLAYLIST = 'SET_PLAYLIST'//设置播放列表
 export const SET_SEQUENCE_LIST = 'SET_SEQUENCE_LIST'//设置顺序播放列表
 export const SET_PLAY_MODE = 'SET_PLAY_MODE'//设置当前歌曲索引
 export const SET_CURRENT_INDEX = 'SET_CURRENT_INDEX'//设置当前歌曲
+export const SET_DISC = 'SET_DISC'

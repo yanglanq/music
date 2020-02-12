@@ -1,8 +1,9 @@
 <template>
-    <div class="singer">
+    <div class="singer" ref="singer">
         <listview
                 :data="singerList"
                 @select="selectSinger"
+                ref="list"
         ></listview>
         <router-view>
 
@@ -14,9 +15,10 @@
     import axios from "axios"
     import listview from "../base/listview";
     import {mapMutations} from "vuex"
-    import singerdetail from "../singer-detail/singer-detail"
+    import {playlistMixin} from "../../common/js/mixin";
     export default {
         name: "singer"
+        ,mixins:[playlistMixin]
         ,data(){
             return{
               singerList:[]
@@ -41,7 +43,12 @@
                 // 该变 vuex 中数据
                 this.setSinger(singerItem);
             }
-        }
+            ,handlePlaylist(playlist){
+			    // 监听是否得到了playlist的值
+			    this.$refs.singer.style.bottom=playlist.length > 0 ? "70px" : "";
+			    this.$refs.list.refresh();
+		    },
+	    }
     };
 </script>
 

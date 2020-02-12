@@ -6,6 +6,7 @@ import search from "../components/search/search";
 import singer from "../components/singer/singer";
 import tab from "../components/tab/tab";
 import SingerDetail from "../components/singer-detail/singer-detail"
+import disc from "../components/disc/disc";//
 
 Vue.use(VueRouter); //调用 VueRouter 中间件
 //编写路由
@@ -20,7 +21,13 @@ const routes = [
   },
   {
     path: "/recommend",
-    component: recommend
+    component: recommend,
+    children:[
+      {
+        path: ':id',
+        component: disc
+      }
+    ]
   },
   {
     path: "/search",

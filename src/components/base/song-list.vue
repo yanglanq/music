@@ -8,7 +8,7 @@
             >
                 <div class="content">
                               <h2 class="name">{{song.songName}}</h2>
-                              <p class="desc">{{singername}} -- {{song.songAlbum}}</p>
+                              <p class="desc">{{song.singer[0].name||singername}} -- {{song.songAlbum}}</p>
                 </div>
             </li>
         </ul>
@@ -27,12 +27,22 @@
 		},
 		created() {
 			// eslint-disable-next-line no-console
-			console.log(this.songs)
+			console.log(this.songs[0].singer)
 		},
         methods:{
 	        selectItem(song,index){
 				this.$emit("select",song,index)
-            }
+            },
+
+        },
+        computed:{
+	        getSingerName(song){
+		        if(song.singer[0].name){
+			        return song.singer[0].name
+		        }else{
+			        return this.singername
+		        }
+	        }
         }
 
 	}

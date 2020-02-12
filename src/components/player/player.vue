@@ -18,14 +18,41 @@
                     <h1 class="title" v-html="songData.songName"></h1><!-- 歌曲名称 -->
                     <h2 class="subtitle" v-html="singer.singer_name"></h2><!-- 歌手名称-->
                 </div>
-                <div class="middle">
-                    <div class="middle-l">
+                <div class="middle"
+                     @touchstart.prevent="middleTouchStart"
+                     @touchmove.prevent="middleTouchMove"
+                     @touchend="middleTouchEnd"
+                >
+                    <div class="middle-l" ref="middleL">
                         <div class="cd-wrapper" ref="cdWrapper"> <!-- 歌曲唱片设计 -->
                             <div class="cd" :class="cdClass">
                                 <img alt="" class="image" v-bind:src="songData.songPic">
                             </div>
                         </div>
+                        <p v-text="currentTxt"
+
+                        ></p>
                     </div>
+                    <!-- 歌词模块 scroll 组件 歌词要可以上下滑动 绑定了当前歌词信息和当前在那一行 -->
+                    <scroll class="middle-r" ref="lyricList"
+                            :data="currentLyric && currentLyric.lines"
+                            :scroll-x="false"
+                            :scroll-y="true"
+                    >
+                        <div class="lyric-wrapper">
+                            <div v-if="currentLyric"><!-- 当前歌词信息存在就显示 -->
+                                <p ref="lyricLine"
+                                   class="text"
+                                   :class="{'current': currentLineNum ===index}"
+                                   v-for="(line,index) in currentLyric.lines" v-bind:key="index">									{{line.txt}}
+                                </p>
+                                <!--
+                                    当前歌词信息存在就显示 每行歌词都是一个 p 元素
+                                    这一行歌词匹配上 currentLineNum ===index 就加上类名 current
+                                 -->
+                            </div>
+                        </div>
+                    </scroll>
                 </div>
                 <div class="bottom">
                     <div class="progress-wrapper">
@@ -92,6 +119,11 @@
 	import progressCircle from "../base/progress-circle"; //导入原型进度条组件
 	import {playMode} from "../../common/js/config";//导入播放模式的基本参数, 避免出错
 	import {shuffle} from "../../common/js/util";
+    import Lyric from "lyric-parser"
+    import scroll from "../base/scroll";
+    import {prefixStyle} from "../../common/js/dom"
+    const transform = prefixStyle('transform');//做样式的兼容
+    const transitionDuration = prefixStyle('transitionDuration')//做样式的兼容
 
 	export default {
 		name: "player",
@@ -133,6 +165,11 @@
 				currentTime: 0,//默认的播放时间
 				totalTime: 0,//歌曲总时间
 				radius: 32,// 定义圆形的进度条组件的基本尺寸
+				currentLyric:null,//当前的歌词信息，默认为null
+                currentLineNum:0,//当前高亮的歌词行数，默认为0
+			    currentShow:"cd",//当前显示默认为 cd
+                touch:{},
+				currentTxt:""
 			}
 		},
 		methods: {
@@ -144,8 +181,7 @@
 				setPlayMode:"SET_PLAY_MODE",
 				setPlayList:"SET_PLAYLIST"
 			}),
-			end(){
-				//歌曲播放完成
+			end(){//歌曲播放完成
 				if(this.playMode===playMode.loop){
 					//如果是循环模式
 					this.loop();//
@@ -158,6 +194,9 @@
 			loop(){
 				this.$refs.audio.currentTime=0;//播放时间归零
 				this.$refs.audio.play();//重新播放
+                if(this.currentLyric){
+                	this.currentLyric.seek(0)//重新播
+                }
 			},
 			changeMode(){
 				let nowMode = (this.playMode+1) % 3;// 每点击一次, 值加一, 然后求模3
@@ -186,18 +225,16 @@
 				// 所以就在watch里面修改一下currentSong的逻辑
 			},
 			onProgressBarChange(percent) { //子组件传递过来的数据
-				// eslint-disable-next-line no-console
-				console.log("player组件的百分比", percent)
-				// eslint-disable-next-line no-console
-
 				this.$refs.audio.currentTime = Math.floor(this.totalTime * percent);
 				if (!this.playing) { // 如果我们拉动进度的条的时候歌曲没有在播放, 那么就把它设置为播放
 					this.togglePlaying()
 				}
+				if(this.currentLyric){
+					//里面的变量是毫秒，所以 *1000
+					this.currentLyric.seek(this.$refs.audio.currentTime*1000)
+                }
 			},
 			format(time) {
-				// eslint-disable-next-line no-console
-				//console.log(time)
 				let min = Math.floor(time / 60);
 				let second = Math.floor(time % 60);
 
@@ -213,7 +250,6 @@
 			updateTime(ev) {
 				this.currentTime = ev.target.currentTime;//获取当前音乐的播放时间, 这个时间一直都是秒数
 			},
-
 			open() {
 				this.setFullScreen(true);
 			},
@@ -224,36 +260,44 @@
 				if (!this.songReady) { //当歌曲没有加载好的时候, 点击直接返回, 使之无效化
 					return;
 				}
-				let nowIndex = this.currentIndex - 1;
-				if (nowIndex < 0) {
-					nowIndex = this.playlist.length - 1;//播放到第一首了,就回到最后一首歌
-				}
-				this.setCurrentIndex(nowIndex);//设置当前索引值
-				if (!this.playing) {
-					this.togglePlaying();
-					// 当我们的播放器处于暂停的时候, 我们点击下一首的时候,也把音乐设置为暂停的状态
-					// 因为在默认的情况下我们更改了currentIndex,那么currentSong也会变
-					// currentSong的变化就会触发新的请求,接着就是播放新的歌
-					// 这种情况就会变成, 无论当前的播放是啥, 下一首都是播放, 但是这个没有触发playing的值,自然播放按钮的logo就不会变
-				}
+				if(this.playlist.length === 1){
+					this.loop()
+                }else{
+					let nowIndex = this.currentIndex - 1;
+					if (nowIndex < 0) {
+						nowIndex = this.playlist.length - 1;//播放到第一首了,就回到最后一首歌
+					}
+					this.setCurrentIndex(nowIndex);//设置当前索引值
+					if (!this.playing) {
+						this.togglePlaying();
+						// 当我们的播放器处于暂停的时候, 我们点击下一首的时候,也把音乐设置为暂停的状态
+						// 因为在默认的情况下我们更改了currentIndex,那么currentSong也会变
+						// currentSong的变化就会触发新的请求,接着就是播放新的歌
+						// 这种情况就会变成, 无论当前的播放是啥, 下一首都是播放, 但是这个没有触发playing的值,自然播放按钮的logo就不会变
+					}
+                }
 				this.songReady = false;//复位
 			},
 			next() {
 				if (!this.songReady) { //当歌曲没有加载好的时候, 点击直接返回, 使之无效化
 					return;
 				}
-				let nowIndex = this.currentIndex + 1;
-				if (nowIndex > this.playlist.length) {
-					nowIndex = 0;//播放到最后一首了,就回到第一首歌
-				}
-				this.setCurrentIndex(nowIndex);//设置当前索引值
-				if (!this.playing) {
-					this.togglePlaying();
-					// 当我们的播放器处于暂停的时候, 我们点击下一首的时候,也把音乐设置为暂停的状态
-					// 因为在默认的情况下我们更改了currentIndex,那么currentSong也会变
-					// currentSong的变化就会触发新的请求,接着就是播放新的歌
-					// 这种情况就会变成, 无论当前的播放是啥, 下一首都是播放, 但是这个没有触发playing的值,自然播放按钮的logo就不会变
-				}
+				if(this.playlist.length === 1){
+					this.loop()
+				}else{
+					let nowIndex = this.currentIndex + 1;
+					if (nowIndex > this.playlist.length) {
+						nowIndex = 0;//播放到最后一首了,就回到第一首歌
+					}
+					this.setCurrentIndex(nowIndex);//设置当前索引值
+					if (!this.playing) {
+						this.togglePlaying();
+						// 当我们的播放器处于暂停的时候, 我们点击下一首的时候,也把音乐设置为暂停的状态
+						// 因为在默认的情况下我们更改了currentIndex,那么currentSong也会变
+						// currentSong的变化就会触发新的请求,接着就是播放新的歌
+						// 这种情况就会变成, 无论当前的播放是啥, 下一首都是播放, 但是这个没有触发playing的值,自然播放按钮的logo就不会变
+					}
+                }
 				this.songReady = false;//复位
 			},
 			ready() {
@@ -264,8 +308,7 @@
 				this.songReady = false;
 			},
 			_getPosAndScale() { //获取基本位置
-				//定义小图元素的尺寸参数数据
-				const targetWidth = 40;
+				const targetWidth = 40;//定义小图元素的尺寸参数数据
 				//定义小图元素的位置参数
 				const paddingLeft = 40;
 				const paddingBottom = 30;
@@ -333,22 +376,105 @@
 			},
 			togglePlaying() {
 				this.setPlayingState(!this.playing);//点击一次, 变更播放状态.
+			    if(this.currentLyric){
+				    this.currentLyric.togglePlay()
+                }
+            },
+			handelLyric(lineNum){//歌词滑动
+				this.currentLineNum = lineNum.lineNum;
+				console.log(this.currentLineNum)
+				if(this.currentLineNum>5){
+					let lineEl = this.$refs.lyricLine[this.currentLineNum-5]// scroll 组件要滚到的那个元素
+					this.$refs.lyricList.scrollToElement(lineEl,1000);
+				}else{
+					this.$refs.lyricList.scrollTo(0,0,1000);
+				}
+				this.currentTxt = lineNum.txt;
+			},
+			middleTouchStart(e){
+				this.touch.initiated = true; //打开开关
+				//获取手指触摸位置
+				const touch = e.touches[0];
+				this.touch.startX = touch.pageX;
+				this.touch.startY = touch.pageY;
+			},
+			middleTouchMove(e){
+				if (!this.touch.initiated) { //判断开关是否打开
+					return
+				}
+				//获取手指滑动位置
+				const touch = e.touches[0];
+				//获取手指滑动的 偏移量
+				const deltaX = touch.pageX - this.touch.startX;
+				const deltaY = touch.pageY - this.touch.startY;
+
+				//判断用户是水平还是垂直滑动, 垂直滑动则啥也不干
+				if (Math.abs(deltaY) > Math.abs(deltaX)) {
+					return
+				}
+
+				// 确定是水平滑动的时候, 就判断当前是啥状态, 如果是cd的话, 说明没有移动,
+				// 如果是歌词的话, 那么就是已经移动了负的屏幕宽度
+				const left = this.currentShow === 'cd' ? 0 : -window.innerWidth;
+
+				// 计算默认偏移量, 最小是不偏移, 最多偏移整个屏幕的宽度
+				const offsetWidth = Math.min(0, Math.max(-window.innerWidth, left + deltaX));
+
+				//计算偏移的百分比, 用来设置CD模块的透明度, 并存储起来
+				this.touch.percent = Math.abs(offsetWidth / window.innerWidth);
+				this.$refs.middleL.style.opacity = 1 - this.touch.percent;
+				this.$refs.middleL.style[transitionDuration] = 0;
+
+				//设置歌词部分的偏移量
+				this.$refs.lyricList.$el.style[transform] = `translate3d(${offsetWidth}px,0,0)`;
+				this.$refs.lyricList.$el.style[transitionDuration] = 0;
+
+			},
+			middleTouchEnd(){
+				let offsetWidth;
+				let opacity;
+				if (this.currentShow === 'cd') {
+					if (this.touch.percent > 0.1) { //偏移超过10%, 则进行切换
+						offsetWidth = -window.innerWidth;
+						opacity = 0;
+						this.currentShow = 'lyric';
+					} else { // 不超过, 则不切换
+						offsetWidth = 0;
+						opacity = 1;
+					}
+				} else {
+					if (this.touch.percent < 0.9) {//偏移超过10%, 则进行切换, 这是向右滑动, 实际偏移是变少了
+						offsetWidth = 0;
+						this.currentShow = 'cd';
+						opacity = 1;
+					} else {// 不超过, 则不切换
+						offsetWidth = -window.innerWidth;
+						opacity = 0;
+					}
+				}
+				//设置动画过渡时间
+				const time = 300;
+				//设置歌词部分的偏移量
+				this.$refs.lyricList.$el.style[transform] = `translate3d(${offsetWidth}px,0,0)`;
+				this.$refs.lyricList.$el.style[transitionDuration] = `${time}ms`;
+				//设置CD部分的透明度和动画效果
+				this.$refs.middleL.style.opacity = opacity;
+				this.$refs.middleL.style[transitionDuration] = `${time}ms`;
+				this.touch.initiated = false;
 			}
 		},
 		watch: {
 			currentSong(newSong,oldSong) { // 当 currentSong数据更新之后, 我们就利用当前的song里面的数据,来发送进一步的请求,得到具体的歌曲数据
-				// eslint-disable-next-line no-console
-				//console.log(this.currentSong.songMid);
 				if(newSong.songMid===oldSong.songMid){
 					return ; // 如果改变后这个
 				}
 				let data = {
 					mid: this.currentSong.songMid
 				};
-				axios.post("http://127.0.0.1:9527/api/getSongDetailData", JSON.stringify(data)).then((data) => {
-					// this.songData=data.data[0];
-					// eslint-disable-next-line no-console
-					//console.log(Array.isArray(data.data));
+				if(this.currentLyric){
+					this.currentLyric.stop();
+                }
+				axios.post("http://localhost:9527/api/getSongDetailData", JSON.stringify(data)).then((data) => {
 					if (Array.isArray(data.data)) {//部分接口返回的是一个数组,表示有多个版本
 						this.songData = data.data[0]
 					} else {
@@ -357,29 +483,36 @@
 				})
 			},
 			songData() {
-				// eslint-disable-next-line no-console
-				//console.log("songData数据已更新");
-				// eslint-disable-next-line no-console
-				//console.log(this.songData.m4aUrl);
+                let data = {
+                	songMid:this.songData.songMid
+                }
+                axios.post("http://localhost:9527/api/getLyricData",JSON.stringify(data)).then(da=>{
+	                this.currentLyric = new Lyric(da.data,this.handelLyric);
+                    if(this.playing){//当歌曲处于播放状态的时候播放歌词
+                        this.currentLyric.play()
+                    }
+                }).catch(err=>{
+                	this.currentLyric = null;
+                	this.currentLineNum = 0;
+                	this.currentTxt = ""
+                })
 
 				this.$nextTick(() => {
 					//因为我们设置audio元素的src的瞬间, 资源还没加载好, 所以贸然直接播放是会出问题的
 					this.$refs.audio.play();
 				});
-				// eslint-disable-next-line no-console
-				//console.log("歌曲总时间的字符串值:", this.songData.playTime);
 				this.totalTime = Number(this.songData.playTime.split(":")[0]) * 60 + Number(this.songData.playTime.split(":")[1]);
-				// eslint-disable-next-line no-console
-				//console.log("歌曲的总时间", this.totalTime);
 			},
 			playing(newPlaying) {
 				let audio = this.$refs.audio;
 				newPlaying ? audio.play() : audio.pause(); // 根据播放状态, 改变音乐播放情况
-			}
+			},
+
 		},
 		components: {
 			progressbar,
-			progressCircle
+			progressCircle,
+            scroll
 		}
 	}
 </script>
@@ -454,6 +587,13 @@
                     width: 100%
                     height: 0
                     padding-top: 80%
+
+                    p
+                        margin-top 15px
+                        text-align center
+                        line-height: 32px
+                        font-size: $font-size-medium
+                        color: $color-text-l
 
                     .cd-wrapper
                         position: absolute
