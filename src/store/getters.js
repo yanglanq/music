@@ -7,6 +7,7 @@ export const fullScreen = state => state.fullScreen;
 export const playMode = state => state.playMode;
 export const currentIndex = state => state.currentIndex;//当前歌曲索引
 export const disc = state => state.disc//获取当前歌单
+export const topList = state => state.topList//获取当前榜单歌单具体歌曲数据
 export const currentSong = (state) => {//当前歌曲
 	//类似于一个计算属性, 做一个防错处理,
 	return state.playlist[state.currentIndex]||{};

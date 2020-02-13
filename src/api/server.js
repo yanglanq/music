@@ -25,6 +25,10 @@ const {getSingerData} = require("./singer/getSingerData");
 const {getSingerDetailData} = require("./singerDetailTable/getSingerDetail");
 const {getSongDetailData} = require("./songDetail/getSongDetail")
 const {getLyricData} = require("./lyric/getLyric")
+const {getRankData} = require("./rank/getRankData")
+const {getRankDetail}= require("./rank/getRankDetail")
+const {getHotKey} = require("./hotKey/getHotKey")
+const {getSearchResult} = require("./search/getSearchData")
 
 //推荐页 歌单数据
 app.get("/api/getRecommendData",getRecommendData);
@@ -38,6 +42,14 @@ app.post("/api/getSingerDetailData",getSingerDetailData)
 app.post("/api/getSongDetailData",getSongDetailData);
 //获取歌词数据
 app.post("/api/getLyricData",getLyricData);
+//获取榜单数据
+app.get("/api/getRankData",getRankData);
+//获取榜单具体歌曲数据
+app.get("/api/getRankDetail/:id",getRankDetail);
+//获取热刺数据
+app.get("/api/getHotKey",getHotKey);
+//获取搜索数据
+app.get("/api/getSearchResult/:id",getSearchResult)
 
 
 

@@ -63,30 +63,10 @@ let recommendDetailSchema = new Schema({
                 type: String,
                 required: true
             },
-			singer: [
-				{
-					id: {
-						// 歌手 id
-						type: String,
-						required: true
-					},
-					name: {
-						// 歌手名字
-						type: String,
-						required: true
-					},
-					mid: {
-						// 歌手 mid
-						type: String,
-						required: true
-					},
-					title: {
-						// 歌手 mid
-						type: String,
-						required: true
-					}
-				}
-			]
+			singerName:{
+				type: String,
+				required: true
+			}
 		}
 	]
 });

@@ -88,15 +88,15 @@
 	        }),
         	selectItem(item){
                 axios.get(`http://localhost:9527/api/getRecommendDetailData/${item.id}`).then(da=>{
-                	let disc;
+	                let disc;
                 	if(da.data[0]){
 		                disc = da.data[0];
                     }else{
 		                disc = da.data
                     }
                 	this.setDisc(disc);//设置专辑
+	                this.$router.push(`/recommend/${item.id}`)//进行路由跳转
                 })
-		        this.$router.push(`/recommend/${item.id}`)//进行路由跳转
             },
 
         }

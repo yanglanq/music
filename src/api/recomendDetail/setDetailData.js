@@ -36,7 +36,7 @@ module.exports = {
                         console.log(songList.taogeData.songlist[0],songList.taogeData.songlist[0].singer)
                         songList.taogeData.songlist.forEach(item => {
                             finalData.songList.push({
-                                singer: item.singer,
+                                singerName: item.singername,
                                 songMid: item.mid,
                                 songName: item.name,
                                 songAlbum:songList.taogeData.title
